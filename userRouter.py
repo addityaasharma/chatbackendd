@@ -8,7 +8,7 @@ userBP = Blueprint("user", __name__)
 
 
 @userBP.route("/signup", methods=["POST"])
-def login():
+def signup():
     data = request.json
     requiredFields = ["username", "email", "password", "phoneNumber"]
 
