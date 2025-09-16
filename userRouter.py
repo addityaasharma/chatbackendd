@@ -214,27 +214,21 @@ def send_chat():
 
 
 @userBP.route("/chat", methods=["GET"])
-def get_chats():
+def get_group_chats():
     try:
-        user_id = request.args.get("userID", type=int)
-        receiver_id = request.args.get("receiverID")
         group_id = request.args.get("groupID", type=int)
 
-        query = UserChat.query
+        if not group_id:
+            return (
+                jsonify({"status": "error", "message": "Please provide a groupID"}),
+                400,
+            )
 
-        if user_id:
-            query = query.filter_by(userID=user_id)
-
-        if receiver_id:
-            if receiver_id == "all":
-                query = query.filter_by(recieverID=None)
-            else:
-                query = query.filter_by(recieverID=int(receiver_id))
-
-        if group_id is not None:
-            query = query.filter_by(groupID=group_id)
-
-        chats = query.order_by(UserChat.chat_at.asc()).all()
+        chats = (
+            UserChat.query.filter_by(groupID=group_id)
+            .order_by(UserChat.chat_at.asc())
+            .all()
+        )
 
         chat_list = []
         for chat in chats:
@@ -243,7 +237,6 @@ def get_chats():
                 {
                     "id": chat.id,
                     "sender": sender.username if sender else "Unknown",
-                    "receiver": "all" if chat.recieverID is None else chat.recieverID,
                     "groupID": chat.groupID,
                     "chat": chat.chat,
                     "chat_at": chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -255,7 +248,11 @@ def get_chats():
     except Exception as e:
         return (
             jsonify(
-                {"status": "error", "message": "Internal Server Error", "error": str(e)}
+                {
+                    "status": "error",
+                    "message": "Internal Server Error",
+                    "error": str(e),
+                }
             ),
             500,
         )
