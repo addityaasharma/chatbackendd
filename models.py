@@ -43,7 +43,7 @@ class UserChat(db.Model):
     panelID = db.Column(db.Integer, db.ForeignKey("UserPanel.id"), nullable=False)
     userID = db.Column(db.Integer, db.ForeignKey("User.id"), nullable=False)
     recieverID = db.Column(
-        db.Integer, db.ForeignKey("User.id"), nullable=False
+        db.Integer, db.ForeignKey("User.id"), nullable=True
     )
     chat = db.Column(db.String(255), nullable=False)
     chat_at = db.Column(db.DateTime, default=datetime.utcnow)

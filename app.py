@@ -4,6 +4,7 @@ from models import db
 from flask_cors import CORS
 from flask_migrate import Migrate
 from userRouter import userBP
+from socket_instance import socketio
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -20,7 +21,7 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 app.register_blueprint(userBP, url_prefix="/user")
-
+socketio.init_app(app, cors_allowed_origins="*")
 
 @app.route("/")
 def method_name():
@@ -28,4 +29,5 @@ def method_name():
 
 
 if __name__ == "__main__":
+    socketio.run(app, debug=True)
     app.run(debug=True)
