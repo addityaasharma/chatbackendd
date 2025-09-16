@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from models import db, User, UserPanel, UserChat, Post
+from models import db, User, UserPanel, UserChat, Post, ChatGroup
 from datetime import datetime, timedelta
 from socket_instance import socketio
 import jwt, os
@@ -160,6 +160,8 @@ def send_chat():
             400,
         )
 
+    group_id = data.get("groupID")
+
     try:
         user = User.query.get(data["userID"])
         if not user:
@@ -173,6 +175,7 @@ def send_chat():
             panelID=user.panel.id,
             userID=user.id,
             recieverID=receiver_id,
+            groupID=group_id,
             chat=data["message"],
             chat_at=datetime.utcnow(),
         )
@@ -210,17 +213,13 @@ def send_chat():
         )
 
 
-#  GET /chats - all chats
-# GET /chats?userID=1 - chats sent by user
-# GET /chats?receiverID=all - public chats
-# GET /chats?receiverID=2  -  private chats to user
-
-
 @userBP.route("/chat", methods=["GET"])
 def get_chats():
     try:
         user_id = request.args.get("userID", type=int)
         receiver_id = request.args.get("receiverID")
+        group_id = request.args.get("groupID", type=int)
+
         query = UserChat.query
 
         if user_id:
@@ -232,6 +231,9 @@ def get_chats():
             else:
                 query = query.filter_by(recieverID=int(receiver_id))
 
+        if group_id is not None:
+            query = query.filter_by(groupID=group_id)
+
         chats = query.order_by(UserChat.chat_at.asc()).all()
 
         chat_list = []
@@ -242,6 +244,7 @@ def get_chats():
                     "id": chat.id,
                     "sender": sender.username if sender else "Unknown",
                     "receiver": "all" if chat.recieverID is None else chat.recieverID,
+                    "groupID": chat.groupID,
                     "chat": chat.chat,
                     "chat_at": chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
                 }
@@ -258,7 +261,7 @@ def get_chats():
         )
 
 
-@userBP.route("/all", methods=["GET"])
+@userBP.route("/allusers", methods=["GET"])
 def get_all_users():
     try:
         page = request.args.get("page", 1, type=int)
@@ -398,3 +401,65 @@ def get_all_posts():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@userBP.route("/group", methods=["POST"])
+def create_group():
+    try:
+        data = request.json
+        chat_title = data.get("chatTitle")
+
+        if not chat_title:
+            return jsonify({"status": "error", "message": "chatTitle is required"}), 400
+
+        new_group = ChatGroup(chatTitle=chat_title)
+        db.session.add(new_group)
+        db.session.commit()
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Group created successfully",
+                    "group": {
+                        "id": new_group.id,
+                        "chatTitle": new_group.chatTitle,
+                        "created_at": new_group.created_at.strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        ),
+                    },
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@userBP.route("/group", methods=["GET"])
+def get_groups():
+    try:
+        groups = ChatGroup.query.order_by(ChatGroup.created_at.asc()).all()
+
+        group_list = []
+        for group in groups:
+            group_list.append(
+                {
+                    "id": group.id,
+                    "chatTitle": group.chatTitle,
+                    "created_at": group.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "chat_count": len(group.chats),
+                }
+            )
+
+        return jsonify({"status": "success", "groups": group_list}), 200
+
+    except Exception as e:
+        return (
+            jsonify(
+                {"status": "error", "message": "Internal Server Error", "error": str(e)}
+            ),
+            500,
+        )

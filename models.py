@@ -36,33 +36,28 @@ class UserPanel(db.Model):
     chats = db.relationship("UserChat", back_populates="panel")
     chat_groups = db.relationship("ChatGroup", back_populates="panel")
 
+class ChatGroup(db.Model):
+    __tablename__ = "ChatGroup"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    chatTitle = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    panel = db.relationship("UserPanel", back_populates="chat_groups")
+    chats = db.relationship("UserChat", back_populates="group", cascade="all, delete-orphan")
 
 class UserChat(db.Model):
     __tablename__ = "UserChat"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     panelID = db.Column(db.Integer, db.ForeignKey("UserPanel.id"), nullable=False)
     userID = db.Column(db.Integer, db.ForeignKey("User.id"), nullable=False)
-    recieverID = db.Column(db.Integer, db.ForeignKey("User.id"), nullable=True)
+    recieverID = db.Column(db.Integer, db.ForeignKey("User.id"), nullable=True)  # only for private chats
+    groupID = db.Column(db.Integer, db.ForeignKey("ChatGroup.id"), nullable=True)  # link to group
     chat = db.Column(db.String(255), nullable=False)
     chat_at = db.Column(db.DateTime, default=datetime.utcnow)
+
     panel = db.relationship("UserPanel", back_populates="chats")
     sender = db.relationship("User", foreign_keys=[userID], back_populates="sent_chats")
-    receiver = db.relationship(
-        "User", foreign_keys=[recieverID], back_populates="received_chats"
-    )
-    groups = db.relationship("ChatGroup", back_populates="chat")
-
-
-class ChatGroup(db.Model):
-    __tablename__ = "ChatGroup"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
-    chatTitle = db.Column(db.String(255), nullable=False)
-    chatId = db.Column(db.Integer, db.ForeignKey("UserChat.id"), nullable=False)
-    panelId = db.Column(db.Integer, db.ForeignKey("UserPanel.id"), nullable=False)
-    chat_at = db.Column(db.DateTime, default=datetime.utcnow)
-    chat = db.relationship("UserChat", back_populates="groups")
-    panel = db.relationship("UserPanel", back_populates="chat_groups")
-
+    receiver = db.relationship("User", foreign_keys=[recieverID], back_populates="received_chats")
+    group = db.relationship("ChatGroup", back_populates="chats")
 
 class Post(db.Model):
     __tablename__ = "Post"
