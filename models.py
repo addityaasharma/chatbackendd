@@ -34,7 +34,6 @@ class UserPanel(db.Model):
     userId = db.Column(db.Integer, db.ForeignKey("User.id"), nullable=False)
     user = db.relationship("User", back_populates="panel")
     chats = db.relationship("UserChat", back_populates="panel")
-    chat_groups = db.relationship("ChatGroup", back_populates="panel")
 
 class ChatGroup(db.Model):
     __tablename__ = "ChatGroup"
