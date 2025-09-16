@@ -144,18 +144,17 @@ def send_chat():
     requiredFields = ["userID", "message"]
 
     if not all(field in data and data[field] for field in requiredFields):
-        return jsonify({
-            "status": "error",
-            "message": "Please provide userID and message"
-        }), 400
+        return (
+            jsonify(
+                {"status": "error", "message": "Please provide userID and message"}
+            ),
+            400,
+        )
 
     try:
         user = User.query.get(data["userID"])
         if not user:
-            return jsonify({
-                "status": "error",
-                "message": "Sender not found"
-            }), 404
+            return jsonify({"status": "error", "message": "Sender not found"}), 404
 
         receiver_id = data.get("receiverID")
         if receiver_id == "all":
@@ -166,7 +165,7 @@ def send_chat():
             userID=user.id,
             recieverID=receiver_id,
             chat=data["message"],
-            chat_at=datetime.utcnow()
+            chat_at=datetime.utcnow(),
         )
         db.session.add(new_chat)
         db.session.commit()
@@ -176,34 +175,42 @@ def send_chat():
             "sender": user.username,
             "receiver": "all" if receiver_id is None else receiver_id,
             "chat": new_chat.chat,
-            "chat_at": new_chat.chat_at.strftime("%Y-%m-%d %H:%M:%S")
+            "chat_at": new_chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
         socketio.emit("receive_message", chat_payload)
 
-        return jsonify({
-            "status": "success",
-            "message": "Chat sent successfully",
-            "chat": chat_payload
-        }), 201
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Chat sent successfully",
+                    "chat": chat_payload,
+                }
+            ),
+            201,
+        )
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            "status": "error",
-            "message": "Internal Server Error",
-            "error": str(e)
-        }), 500
+        return (
+            jsonify(
+                {"status": "error", "message": "Internal Server Error", "error": str(e)}
+            ),
+            500,
+        )
+
 
 #  GET /chats - all chats
-# GET /chats?userID=1 - chats sent by user 
+# GET /chats?userID=1 - chats sent by user
 # GET /chats?receiverID=all - public chats
 # GET /chats?receiverID=2  -  private chats to user
-        
+
+
 @userBP.route("/chat", methods=["GET"])
 def get_chats():
     try:
-        user_id = request.args.get("userID", type=int)   
+        user_id = request.args.get("userID", type=int)
         receiver_id = request.args.get("receiverID")
         query = UserChat.query
 
@@ -221,22 +228,72 @@ def get_chats():
         chat_list = []
         for chat in chats:
             sender = User.query.get(chat.userID)
-            chat_list.append({
-                "id": chat.id,
-                "sender": sender.username if sender else "Unknown",
-                "receiver": "all" if chat.recieverID is None else chat.recieverID,
-                "chat": chat.chat,
-                "chat_at": chat.chat_at.strftime("%Y-%m-%d %H:%M:%S")
-            })
+            chat_list.append(
+                {
+                    "id": chat.id,
+                    "sender": sender.username if sender else "Unknown",
+                    "receiver": "all" if chat.recieverID is None else chat.recieverID,
+                    "chat": chat.chat,
+                    "chat_at": chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            )
 
-        return jsonify({
-            "status": "success",
-            "chats": chat_list
-        }), 200
+        return jsonify({"status": "success", "chats": chat_list}), 200
 
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": "Internal Server Error",
-            "error": str(e)
-        }), 500
+        return (
+            jsonify(
+                {"status": "error", "message": "Internal Server Error", "error": str(e)}
+            ),
+            500,
+        )
+
+
+@userBP.route("/all", methods=["GET"])
+def get_all_users():
+    try:
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 10, type=int)
+        search = request.args.get("search", "", type=str)
+
+        query = User.query
+
+        if search:
+            query = query.filter(
+                (User.name.ilike(f"%{search}%")) | (User.email.ilike(f"%{search}%"))
+            )
+
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        users = pagination.items
+
+        user_list = [
+            {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "phoneNumber": user.phoneNumber,
+            }
+            for user in users
+        ]
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "page": page,
+                    "per_page": per_page,
+                    "total_users": pagination.total,
+                    "total_pages": pagination.pages,
+                    "users": user_list,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return (
+            jsonify(
+                {"status": "error", "message": "Internal Server Error", "error": str(e)}
+            ),
+            500,
+        )
