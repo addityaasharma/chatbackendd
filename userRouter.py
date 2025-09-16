@@ -1,11 +1,22 @@
 from flask import Blueprint, jsonify, request, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, UserPanel, UserChat
+from werkzeug.utils import secure_filename
+from models import db, User, UserPanel, UserChat, Post
 from datetime import datetime, timedelta
 from socket_instance import socketio
-import jwt
+import jwt, os
 
 userBP = Blueprint("user", __name__)
+
+UPLOAD_FOLDER = "uploads"  # folder to save images
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @userBP.route("/signup", methods=["POST"])
@@ -84,7 +95,6 @@ def login():
     data = request.json
     requiredFields = ["email", "password"]
 
-    # Ensure required fields are provided
     if not all(field in data and data[field] for field in requiredFields):
         return (
             jsonify(
@@ -99,7 +109,6 @@ def login():
         if not user:
             return jsonify({"status": "error", "message": "User not found"}), 404
 
-        # Check password
         if not check_password_hash(user.password, data["password"]):
             return jsonify({"status": "error", "message": "Invalid password"}), 401
 
@@ -297,3 +306,95 @@ def get_all_users():
             ),
             500,
         )
+
+
+@userBP.route("/post", methods=["POST"])
+def create_post():
+    try:
+        file = request.files.get("image")
+        link = request.form.get("link")
+
+        if not file or file.filename == "":
+            return (
+                jsonify({"status": "error", "message": "Image file is required"}),
+                400,
+            )
+
+        if not allowed_file(file.filename):
+            return jsonify({"status": "error", "message": "Invalid file type"}), 400
+
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+
+        new_post = Post(image=filename, link=link)
+        db.session.add(new_post)
+        db.session.commit()
+
+        image_url = request.host_url + "uploads/" + filename
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Post created successfully",
+                    "post": {
+                        "id": new_post.id,
+                        "image": image_url,
+                        "link": link,
+                    },
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@userBP.route("/post", methods=["GET"])
+def get_latest_post():
+    try:
+        latest_post = Post.query.order_by(Post.id.desc()).first()
+
+        if not latest_post:
+            return jsonify({"status": "error", "message": "No posts found"}), 404
+
+        image_url = request.host_url + "uploads/" + latest_post.image
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "post": {
+                        "id": latest_post.id,
+                        "image": image_url,
+                        "link": latest_post.link,
+                    },
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@userBP.route("/posts", methods=["GET"])
+def get_all_posts():
+    try:
+        posts = Post.query.order_by(Post.id.desc()).all()
+
+        if not posts:
+            return jsonify({"status": "error", "message": "No posts found"}), 404
+
+        posts_data = []
+        for post in posts:
+            image_url = request.host_url + "uploads/" + post.image
+            posts_data.append({"id": post.id, "image": image_url, "link": post.link})
+
+        return jsonify({"status": "success", "posts": posts_data}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500

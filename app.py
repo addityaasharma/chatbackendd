@@ -11,7 +11,7 @@ app.config.from_object(Config)
 
 CORS(
     app,
-    resources={r"/*": {"origins": "http://localhost:5173"}},
+    resources={r"/*": {"origins": "*"}},
     supports_credentials=True,
     allow_headers=["Content-Type", "Authorization"],
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],

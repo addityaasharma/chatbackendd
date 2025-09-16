@@ -42,9 +42,7 @@ class UserChat(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     panelID = db.Column(db.Integer, db.ForeignKey("UserPanel.id"), nullable=False)
     userID = db.Column(db.Integer, db.ForeignKey("User.id"), nullable=False)
-    recieverID = db.Column(
-        db.Integer, db.ForeignKey("User.id"), nullable=True
-    )
+    recieverID = db.Column(db.Integer, db.ForeignKey("User.id"), nullable=True)
     chat = db.Column(db.String(255), nullable=False)
     chat_at = db.Column(db.DateTime, default=datetime.utcnow)
     panel = db.relationship("UserPanel", back_populates="chats")
@@ -64,3 +62,10 @@ class ChatGroup(db.Model):
     chat_at = db.Column(db.DateTime, default=datetime.utcnow)
     chat = db.relationship("UserChat", back_populates="groups")
     panel = db.relationship("UserPanel", back_populates="chat_groups")
+
+
+class Post(db.Model):
+    __tablename__ = "Post"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    image = db.Column(db.String(255))
+    link = db.Column(db.String(255))
