@@ -34,6 +34,7 @@
 
 
 import eventlet
+
 eventlet.monkey_patch()
 
 from flask import Flask
@@ -43,6 +44,7 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 from userRouter import userBP
 from socket_instance import socketio
+import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -59,7 +61,9 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 app.register_blueprint(userBP, url_prefix="/user")
-socketio.init_app(app, cors_allowed_origins="*")
+
+# SocketIO with eventlet async mode
+socketio.init_app(app, cors_allowed_origins="*", async_mode="eventlet")
 
 
 @app.route("/")
@@ -68,6 +72,5 @@ def method_name():
 
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=True)
+    socketio.run(app, host="0.0.0.0", port=port)
