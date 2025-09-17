@@ -34,7 +34,7 @@
 
 
 import eventlet
-eventlet.monkey_patch()  # must be first, before Flask or SocketIO imports
+eventlet.monkey_patch()
 
 from flask import Flask
 from config import Config
@@ -68,7 +68,6 @@ def method_name():
 
 
 if __name__ == "__main__":
-    # Render uses $PORT, so default to 5000 if not set
     import os
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port, debug=True)
