@@ -98,30 +98,25 @@ CORS(
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 )
 
-# Database setup
 db.init_app(app)
 migrate = Migrate(app, db)
 
-# Blueprints
 app.register_blueprint(userBP, url_prefix="/user")
 
-# SocketIO
 socketio.init_app(app, cors_allowed_origins="*")
 
 @app.route("/")
 def index():
     return "Hello from Flask SocketIO!"
 
-# Use Eventlet for Render
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))  # Use Render's assigned port
-    # debug=False in production
     socketio.run(
         app,
         host="0.0.0.0",
         port=port,
-        debug=False,       # Set False on Render
-        use_reloader=False, # Avoid multiple processes that break sockets
-        allow_unsafe_werkzeug=True # Required for Eventlet 0.33+ with Flask 2.3+
+        debug=False,
+        use_reloader=False,
+        allow_unsafe_werkzeug=True,
     )
