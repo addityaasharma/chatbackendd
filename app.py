@@ -23,11 +23,11 @@ migrate = Migrate(app, db)
 app.register_blueprint(userBP, url_prefix="/user")
 socketio.init_app(app, cors_allowed_origins="*")
 
+
 @app.route("/")
 def method_name():
     return "Hello"
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
-    app.run(debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
