@@ -237,13 +237,14 @@ def get_group_chats():
         chat_list = []
         for chat in chats:
             sender = User.query.get(chat.userID)
+            chat_time_ist = chat.chat_at.astimezone(india)
             chat_list.append(
                 {
                     "id": chat.id,
                     "sender": sender.username if sender else "Unknown",
                     "groupID": chat.groupID,
                     "chat": chat.chat,
-                    "chat_at": chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "chat_at": chat_time_ist.strftime("%Y-%m-%d %H:%M:%S"),
                 }
             )
 
