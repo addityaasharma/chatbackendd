@@ -12,7 +12,7 @@
 
 from flask_socketio import SocketIO, join_room, emit
 
-socketio = SocketIO(cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 @socketio.on("join")
 def on_join(data):
