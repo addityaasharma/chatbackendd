@@ -190,7 +190,7 @@ def send_chat():
             "chat_at": new_chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
-        socketio.emit("receive_message", chat_payload, room=f"group_{group_id}")
+        socketio.emit("receive_message", chat_payload, room=f"group_{group_id}", include_self=False)
 
         return (
             jsonify(
