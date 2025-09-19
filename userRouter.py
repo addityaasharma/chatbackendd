@@ -1,15 +1,19 @@
 from flask import Blueprint, jsonify, request, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from zoneinfo import ZoneInfo
 from models import db, User, UserPanel, UserChat, Post, ChatGroup
 from datetime import datetime, timedelta
 from socket_instance import socketio
 import jwt, os
+import pytz
+
 
 userBP = Blueprint("user", __name__)
 
 UPLOAD_FOLDER = "uploads"  # folder to save images
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+india = pytz.timezone("Asia/Kolkata")
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -177,7 +181,7 @@ def send_chat():
             recieverID=receiver_id,
             groupID=group_id,
             chat=data["message"],
-            chat_at=datetime.utcnow(),
+            chat_at=datetime.now(india),
         )
         db.session.add(new_chat)
         db.session.commit()
