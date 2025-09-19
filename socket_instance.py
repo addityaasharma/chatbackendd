@@ -11,6 +11,7 @@
 
 
 from flask_socketio import SocketIO, join_room, emit
+from flask_socketio import request as socket_request
 
 socketio = SocketIO(cors_allowed_origins="*")
 
