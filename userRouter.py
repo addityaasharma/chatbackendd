@@ -23,29 +23,72 @@ def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def generate_unique_username(base_username):
+    username = base_username
+    counter = 1
+    while User.query.filter_by(username=username).first():
+        username = f"{base_username}{counter}"
+        counter += 1
+    return username
+
+
+from flask import request, jsonify, current_app
+from werkzeug.security import generate_password_hash
+from datetime import datetime, timedelta
+import jwt
+import requests
+from models import User, UserPanel, db
+
+
+def generate_unique_username(base_username):
+    username = base_username
+    counter = 1
+    while User.query.filter_by(username=username).first():
+        username = f"{base_username}{counter}"
+        counter += 1
+    return username
+
+
 @userBP.route("/signup", methods=["POST"])
 def signup():
     data = request.json or {}
-    required_fields = ["username", "email", "password", "phoneNumber", "name"]
+    required_fields = ["email", "password", "phoneNumber", "name"]
+    
+    if not required_fields[0]:
+        return jsonify({"status" : "success"})
 
-    if not all(field in data and data[field] for field in required_fields):
-        return (
-            jsonify({"status": "error", "message": "Please fill all the details"}),
-            400,
-        )
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({"status": "error", "message": f"{field} is required"}), 400
+
+    googleToken = data.get("googleToken")
 
     try:
-        existing_user = User.query.filter(
-            (User.username == data["username"]) | (User.email == data["email"])
-        ).first()
+        if googleToken:
+            response = requests.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={googleToken}"
+            )
+            if response.status_code != 200:
+                return (
+                    jsonify({"status": "error", "message": "Invalid Google Token"}),
+                    400,
+                )
 
+            user_info = response.json()
+            data["email"] = user_info.get("email", data["email"])
+            data["name"] = user_info.get("name", data["name"])
+
+        base_username = data["email"].split("@")[0]
+        username = generate_unique_username(base_username)
+
+        existing_user = User.query.filter_by(email=data["email"]).first()
         if existing_user:
             return jsonify({"status": "error", "message": "User already exists"}), 409
 
         hashed_pass = generate_password_hash(data["password"], method="pbkdf2:sha256")
 
         new_user = User(
-            username=data["username"],
+            username=username,
             name=data["name"],
             email=data["email"],
             phoneNumber=data["phoneNumber"],
@@ -56,13 +99,13 @@ def signup():
 
         user_panel = UserPanel(userId=new_user.id)
         db.session.add(user_panel)
-
         db.session.commit()
 
         token_payload = {
             "userId": new_user.id,
             "exp": datetime.utcnow() + timedelta(days=7),
         }
+
         token = jwt.encode(
             token_payload, current_app.config["SECRET_KEY"], algorithm="HS256"
         )
