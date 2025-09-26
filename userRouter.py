@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from socket_instance import socketio
 import jwt, os
 import pytz
+from flask import request, jsonify, current_app
 
 
 userBP = Blueprint("user", __name__)
@@ -32,30 +33,13 @@ def generate_unique_username(base_username):
     return username
 
 
-from flask import request, jsonify, current_app
-from werkzeug.security import generate_password_hash
-from datetime import datetime, timedelta
-import jwt
-import requests
-from models import User, UserPanel, db
-
-
-def generate_unique_username(base_username):
-    username = base_username
-    counter = 1
-    while User.query.filter_by(username=username).first():
-        username = f"{base_username}{counter}"
-        counter += 1
-    return username
-
-
 @userBP.route("/signup", methods=["POST"])
 def signup():
     data = request.json or {}
     required_fields = ["email", "password", "phoneNumber", "name"]
-    
+
     if not required_fields[0]:
-        return jsonify({"status" : "success"})
+        return jsonify({"status": "success"})
 
     for field in required_fields:
         if not data.get(field):
@@ -260,6 +244,52 @@ def send_chat():
         )
 
 
+# @userBP.route("/chat", methods=["GET"])
+# def get_group_chats():
+#     try:
+#         group_id = request.args.get("groupID", type=int)
+
+#         if not group_id:
+#             return (
+#                 jsonify({"status": "error", "message": "Please provide a groupID"}),
+#                 400,
+#             )
+
+#         chats = (
+#             UserChat.query.filter_by(groupID=group_id)
+#             .order_by(UserChat.chat_at.asc())
+#             .all()
+#         )
+
+#         chat_list = []
+#         for chat in chats:
+#             sender = User.query.get(chat.userID)
+#             chat_time_ist = chat.chat_at.astimezone(india)
+#             chat_list.append(
+#                 {
+#                     "id": chat.id,
+#                     "sender": sender.username if sender else "Unknown",
+#                     "groupID": chat.groupID,
+#                     "chat": chat.chat,
+#                     "chat_at": chat_time_ist.strftime("%Y-%m-%d %H:%M:%S"),
+#                 }
+#             )
+
+#         return jsonify({"status": "success", "chats": chat_list}), 200
+
+#     except Exception as e:
+#         return (
+#             jsonify(
+#                 {
+#                     "status": "error",
+#                     "message": "Internal Server Error",
+#                     "error": str(e),
+#                 }
+#             ),
+#             500,
+#         )
+
+
 @userBP.route("/chat", methods=["GET"])
 def get_group_chats():
     try:
@@ -273,9 +303,12 @@ def get_group_chats():
 
         chats = (
             UserChat.query.filter_by(groupID=group_id)
-            .order_by(UserChat.chat_at.asc())
+            .order_by(UserChat.chat_at.desc())
+            .limit(100)
             .all()
         )
+
+        chats.reverse()
 
         chat_list = []
         for chat in chats:
