@@ -7,14 +7,19 @@ from datetime import datetime, timedelta
 from socket_instance import socketio
 import jwt, os
 import pytz
+from redis import Redis
 from flask import request, jsonify, current_app
+from otp_utils import generate_otp, send_otp
 
 
 userBP = Blueprint("user", __name__)
 
-UPLOAD_FOLDER = "uploads"  # folder to save images
+UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 india = pytz.timezone("Asia/Kolkata")
+
+REDIS_URL = os.getenv("REDIS_URL")
+redis = Redis.from_url(REDIS_URL)
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -175,6 +180,86 @@ def login():
                 {"status": "error", "message": "Internal Server Error", "error": str(e)}
             ),
             500,
+        )
+
+
+@userBP.route("/forgot-password", methods=["POST"])
+def forgot_password():
+    data = request.json
+    email = data.get("email")
+
+    if not email:
+        return jsonify({"status": "error", "message": "Please provide email"}), 400
+
+    try:
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return (
+                jsonify(
+                    {"status": "error", "message": "No user found with this email"}
+                ),
+                404,
+            )
+
+        otp = generate_otp()
+        otp_sent = send_otp(email, otp)
+
+        if not otp_sent:
+            return jsonify({"status": "error", "message": "Failed to send OTP"}), 500
+
+        redis.setex(f"forgot_password:{email}", 300, otp)
+
+        return jsonify({"status": "success", "message": "OTP sent successfully"}), 200
+
+    except Exception as e:
+        return (
+            jsonify(
+                {"status": "error", "message": "Internal Server Error", "error": str(e)}
+            ),
+            500,
+        )
+
+
+@userBP.route("/reset-password", methods=["POST"])
+def reset_password():
+    data = request.json
+    otp = data.get("otp")
+    email = data.get("email")
+    new_password = data.get("new_password")
+
+    if not all([email, otp, new_password]):
+        return jsonify(
+            {
+                "status": "error",
+                "message": "Please provide email, OTP, and new password",
+            }
+        )
+
+    try:
+        stored_otp = redis.get(f"forgot_password:{email}")
+        if not stored_otp or str(stored_otp) != str(otp):
+            return (
+                jsonify({"status": "error", "message": "Invalid or expired otp"}),
+                400,
+            )
+
+        findEmail = User.query.filter_by(email=email).first()
+        if not findEmail:
+            return jsonify({"status": "error", "message": "No user found"}), 404
+
+        findEmail.password = generate_password_hash(new_password)
+        db.session.commit()
+
+        redis.delete(f"forgot_password:{email}")
+        return (
+            jsonify({"status": "success", "message": "Password reset successfully"}),
+            200,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(
+            {"status": "error", "message": "Internal Server Error", "error": str(e)}
         )
 
 
