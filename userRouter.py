@@ -222,45 +222,58 @@ def forgot_password():
 
 @userBP.route("/reset-password", methods=["POST"])
 def reset_password():
-    data = request.json
+    data = request.json or {}
     otp = data.get("otp")
     email = data.get("email")
     new_password = data.get("new_password")
 
     if not all([email, otp, new_password]):
-        return jsonify(
-            {
-                "status": "error",
-                "message": "Please provide email, OTP, and new password",
-            }
-        )
+        return jsonify({
+            "status": "error",
+            "message": "Please provide email, OTP, and new password"
+        }), 400
 
     try:
+        # Get OTP from Redis
         stored_otp = redis.get(f"forgot_password:{email}")
-        if not stored_otp or str(stored_otp) != str(otp):
-            return (
-                jsonify({"status": "error", "message": "Invalid or expired otp"}),
-                400,
-            )
+        if not stored_otp:
+            return jsonify({
+                "status": "error",
+                "message": "OTP expired or not found, please request a new one"
+            }), 400
 
-        findEmail = User.query.filter_by(email=email).first()
-        if not findEmail:
+        stored_otp = stored_otp.decode("utf-8")
+        if stored_otp != str(otp):
+            return jsonify({
+                "status": "error",
+                "message": "Incorrect OTP, please try again"
+            }), 400
+
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+        if not user:
             return jsonify({"status": "error", "message": "No user found"}), 404
 
-        findEmail.password = generate_password_hash(new_password)
+        # Update password
+        user.password = generate_password_hash(new_password)
         db.session.commit()
 
+        # Clear OTP
         redis.delete(f"forgot_password:{email}")
-        return (
-            jsonify({"status": "success", "message": "Password reset successfully"}),
-            200,
-        )
+
+        return jsonify({
+            "status": "success",
+            "message": "Password reset successfully"
+        }), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify(
-            {"status": "error", "message": "Internal Server Error", "error": str(e)}
-        )
+        return jsonify({
+            "status": "error",
+            "message": "Internal Server Error"
+            # "error": str(e)  # Uncomment only in dev
+        }), 500
+
 
 
 @userBP.route("/chat", methods=["POST"])
