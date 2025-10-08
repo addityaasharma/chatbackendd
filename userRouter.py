@@ -20,6 +20,16 @@ india = pytz.timezone("Asia/Kolkata")
 
 REDIS_URL = os.getenv("REDIS_URL")
 redis = Redis.from_url(REDIS_URL)
+random_messages = [
+    "Hey, are you still there?",
+    "That’s interesting!",
+    "I totally agree with you.",
+    "Let me check that for you.",
+    "Can you send me more details?",
+    "Haha, that’s funny 😂",
+    "We’ll fix it right away!",
+    "Sure, give me a second.",
+]
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -340,52 +350,6 @@ def send_chat():
             ),
             500,
         )
-
-
-# @userBP.route("/chat", methods=["GET"])
-# def get_group_chats():
-#     try:
-#         group_id = request.args.get("groupID", type=int)
-
-#         if not group_id:
-#             return (
-#                 jsonify({"status": "error", "message": "Please provide a groupID"}),
-#                 400,
-#             )
-
-#         chats = (
-#             UserChat.query.filter_by(groupID=group_id)
-#             .order_by(UserChat.chat_at.asc())
-#             .all()
-#         )
-
-#         chat_list = []
-#         for chat in chats:
-#             sender = User.query.get(chat.userID)
-#             chat_time_ist = chat.chat_at.astimezone(india)
-#             chat_list.append(
-#                 {
-#                     "id": chat.id,
-#                     "sender": sender.username if sender else "Unknown",
-#                     "groupID": chat.groupID,
-#                     "chat": chat.chat,
-#                     "chat_at": chat_time_ist.strftime("%Y-%m-%d %H:%M:%S"),
-#                 }
-#             )
-
-#         return jsonify({"status": "success", "chats": chat_list}), 200
-
-#     except Exception as e:
-#         return (
-#             jsonify(
-#                 {
-#                     "status": "error",
-#                     "message": "Internal Server Error",
-#                     "error": str(e),
-#                 }
-#             ),
-#             500,
-#         )
 
 
 @userBP.route("/chat", methods=["GET"])
