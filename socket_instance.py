@@ -58,69 +58,69 @@ import datetime
 
 socketio = SocketIO(cors_allowed_origins="*", async_mode="gevent")
 
-fake_users = [
-    "Anant",
-    "Shraddha",
-    "Himanshi",
-    "Purnima",
-    "Bhoomika",
-    "Jaspreet",
-    "Ayush",
-    "Rahul",
-    "Neeraj",
-    "Mayank",
-    "Dhiraj",
-    "SnehDeep",
-    "Mihir",
-    "Ritika",
-    "Adarsh",
-    "Ashwini",
-]
-fake_messages = [
-    "Yeh kya hai",
-    "Arey ek naya event aane walaa hai",
-    "Event me suna mai ki macbook milega?",
-    "Haa, koi product purchase krne pr event ki ticket bhi free mil rhi hai",
-    "Maine purchase kia hai mujhe bhi mili hai",
-    "Par ye event hai kya..?",
-    "Iske bare me to shaam 6 bje update aata h group me bole",
-    "Achaa..",
-    "Sahi hai yaar",
-    "Event kaha hai?",
-    "6 baje isi me update aayega..",
-    "Kal join tha to bataye the",
-    "6 baje bahut sare log rehte hai",
-    "Its really fun",
-    "shaam 6 baje..?",
-    "Haa 6 se 8 ki bich.",
-]
+# fake_users = [
+#     "Anant",
+#     "Shraddha",
+#     "Himanshi",
+#     "Purnima",
+#     "Bhoomika",
+#     "Jaspreet",
+#     "Ayush",
+#     "Rahul",
+#     "Neeraj",
+#     "Mayank",
+#     "Dhiraj",
+#     "SnehDeep",
+#     "Mihir",
+#     "Ritika",
+#     "Adarsh",
+#     "Ashwini",
+# ]
+# fake_messages = [
+#     "Yeh kya hai",
+#     "Arey ek naya event aane walaa hai",
+#     "Event me suna mai ki macbook milega?",
+#     "Haa, koi product purchase krne pr event ki ticket bhi free mil rhi hai",
+#     "Maine purchase kia hai mujhe bhi mili hai",
+#     "Par ye event hai kya..?",
+#     "Iske bare me to shaam 6 bje update aata h group me bole",
+#     "Achaa..",
+#     "Sahi hai yaar",
+#     "Event kaha hai?",
+#     "6 baje isi me update aayega..",
+#     "Kal join tha to bataye the",
+#     "6 baje bahut sare log rehte hai",
+#     "Its really fun",
+#     "shaam 6 baje..?",
+#     "Haa 6 se 8 ki bich.",
+# ]
 
 active_rooms = ["group_1", "group_2", "group_3"]
 
 
-def generate_fake_chats():
-    """Background thread that emits fake messages to all rooms."""
-    while True:
-        time.sleep(random.randint(2, 3))
-        # time.sleep(1)
+# def generate_fake_chats():
+#     """Background thread that emits fake messages to all rooms."""
+#     while True:
+#         time.sleep(random.randint(2, 3))
+#         # time.sleep(1)
 
-        for room in active_rooms:
-            user = random.choice(fake_users)
-            message = random.choice(fake_messages)
+#         for room in active_rooms:
+#             user = random.choice(fake_users)
+#             message = random.choice(fake_messages)
 
-            chat_payload = {
-                "id": random.randint(1000, 9999),
-                "sender": user,
-                "receiver": "all",
-                "chat": message,
-                "chat_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            }
+#             chat_payload = {
+#                 "id": random.randint(1000, 9999),
+#                 "sender": user,
+#                 "receiver": "all",
+#                 "chat": message,
+#                 "chat_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+#             }
 
-            socketio.emit("receive_message", chat_payload, room=room)
-            print(f"[Fake] {user} in {room}: {message}")
+#             socketio.emit("receive_message", chat_payload, room=room)
+#             print(f"[Fake] {user} in {room}: {message}")
 
 
-threading.Thread(target=generate_fake_chats, daemon=True).start()
+# threading.Thread(target=generate_fake_chats, daemon=True).start()
 
 
 # -----------------------
@@ -132,7 +132,6 @@ def on_join(data):
     user = data.get("user")  # optional
     if room:
         join_room(room)
-        print(f"User joined room: {room}")
 
         if room not in active_rooms:
             active_rooms.append(room)
