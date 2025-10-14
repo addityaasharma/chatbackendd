@@ -28,27 +28,27 @@ socketio.init_app(app, cors_allowed_origins="*")
 def index():
     return "Hello from Flask SocketIO!"
 
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(
-        app,
-        host="0.0.0.0",
-        port=port,
-        debug=True,
-        use_reloader=False,
-    )
-
-
 # if __name__ == "__main__":
 #     import os
 #     port = int(os.environ.get("PORT", 5000))
-    
-#     # Run in debugging mode on localhost
 #     socketio.run(
 #         app,
-#         host="127.0.0.1",
+#         host="0.0.0.0",
 #         port=port,
 #         debug=True,
-#         use_reloader=True
+#         use_reloader=False,
 #     )
+
+
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    
+    # Run in debugging mode on localhost
+    socketio.run(
+        app,
+        host="127.0.0.1",
+        port=port,
+        debug=True,
+        use_reloader=True
+    )

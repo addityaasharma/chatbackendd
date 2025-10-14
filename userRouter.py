@@ -20,16 +20,6 @@ india = pytz.timezone("Asia/Kolkata")
 
 REDIS_URL = os.getenv("REDIS_URL")
 redis = Redis.from_url(REDIS_URL)
-random_messages = [
-    "Hey, are you still there?",
-    "That’s interesting!",
-    "I totally agree with you.",
-    "Let me check that for you.",
-    "Can you send me more details?",
-    "Haha, that’s funny 😂",
-    "We’ll fix it right away!",
-    "Sure, give me a second.",
-]
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -603,3 +593,49 @@ def get_groups():
             ),
             500,
         )
+
+
+@userBP.route("/chat/<int:user_id>", methods=["GET"])
+def get_user_chats(user_id):
+    try:
+        private_chats = UserChat.query.filter(
+            (UserChat.userID == user_id) | (UserChat.recieverID == user_id)
+        ).order_by(UserChat.chat_at.desc()).all()
+
+        private_chat_data = [
+            {
+                "id": chat.id,
+                "chat": chat.chat,
+                "chat_at": chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "sender": {
+                    "id": chat.sender.id,
+                    "username": chat.sender.username,
+                    "name": chat.sender.name,
+                    "email": chat.sender.email,
+                } if chat.sender else None,
+                "receiver": {
+                    "id": chat.receiver.id,
+                    "username": chat.receiver.username,
+                    "name": chat.receiver.name,
+                    "email": chat.receiver.email,
+                } if chat.receiver else None,
+                "group": {
+                    "id": chat.group.id,
+                    "chatTitle": chat.group.chatTitle,
+                } if chat.group else None,
+            }
+            for chat in private_chats
+        ]
+
+        return jsonify({
+            "status": "success",
+            "total": len(private_chat_data),
+            "chats": private_chat_data
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": "Failed to fetch user chats",
+            "error": str(e)
+        }), 500
