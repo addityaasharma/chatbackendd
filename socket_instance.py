@@ -129,7 +129,7 @@ active_rooms = ["group_1", "group_2", "group_3"]
 @socketio.on("join")
 def on_join(data):
     room = data.get("room")
-    user = data.get("user")  # optional
+    user = data.get("user")
     if room:
         join_room(room)
 
