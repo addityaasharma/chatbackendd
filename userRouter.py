@@ -228,26 +228,38 @@ def reset_password():
     new_password = data.get("new_password")
 
     if not all([email, otp, new_password]):
-        return jsonify({
-            "status": "error",
-            "message": "Please provide email, OTP, and new password"
-        }), 400
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Please provide email, OTP, and new password",
+                }
+            ),
+            400,
+        )
 
     try:
         # Get OTP from Redis
         stored_otp = redis.get(f"forgot_password:{email}")
         if not stored_otp:
-            return jsonify({
-                "status": "error",
-                "message": "OTP expired or not found, please request a new one"
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "OTP expired or not found, please request a new one",
+                    }
+                ),
+                400,
+            )
 
         stored_otp = stored_otp.decode("utf-8")
         if stored_otp != str(otp):
-            return jsonify({
-                "status": "error",
-                "message": "Incorrect OTP, please try again"
-            }), 400
+            return (
+                jsonify(
+                    {"status": "error", "message": "Incorrect OTP, please try again"}
+                ),
+                400,
+            )
 
         # Check if user exists
         user = User.query.filter_by(email=email).first()
@@ -261,19 +273,23 @@ def reset_password():
         # Clear OTP
         redis.delete(f"forgot_password:{email}")
 
-        return jsonify({
-            "status": "success",
-            "message": "Password reset successfully"
-        }), 200
+        return (
+            jsonify({"status": "success", "message": "Password reset successfully"}),
+            200,
+        )
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            "status": "error",
-            "message": "Internal Server Error"
-            # "error": str(e)  # Uncomment only in dev
-        }), 500
-
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Internal Server Error",
+                    # "error": str(e)  # Uncomment only in dev
+                }
+            ),
+            500,
+        )
 
 
 @userBP.route("/chat", methods=["POST"])
@@ -343,7 +359,7 @@ def send_chat():
 
 
 @userBP.route("/chat", methods=["GET"])
-def get_group_chats():
+def fetch_group_chats():
     try:
         group_id = request.args.get("groupID", type=int)
 
@@ -598,44 +614,131 @@ def get_groups():
 @userBP.route("/chat/<int:user_id>", methods=["GET"])
 def get_user_chats(user_id):
     try:
-        private_chats = UserChat.query.filter(
-            (UserChat.userID == user_id) | (UserChat.recieverID == user_id)
-        ).order_by(UserChat.chat_at.desc()).all()
+        private_chats = (
+            UserChat.query.filter(
+                (UserChat.userID == user_id) | (UserChat.recieverID == user_id)
+            )
+            .order_by(UserChat.chat_at.desc())
+            .all()
+        )
 
         private_chat_data = [
             {
                 "id": chat.id,
                 "chat": chat.chat,
                 "chat_at": chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
-                "sender": {
-                    "id": chat.sender.id,
-                    "username": chat.sender.username,
-                    "name": chat.sender.name,
-                    "email": chat.sender.email,
-                } if chat.sender else None,
-                "receiver": {
-                    "id": chat.receiver.id,
-                    "username": chat.receiver.username,
-                    "name": chat.receiver.name,
-                    "email": chat.receiver.email,
-                } if chat.receiver else None,
-                "group": {
-                    "id": chat.group.id,
-                    "chatTitle": chat.group.chatTitle,
-                } if chat.group else None,
+                "sender": (
+                    {
+                        "id": chat.sender.id,
+                        "username": chat.sender.username,
+                        "name": chat.sender.name,
+                        "email": chat.sender.email,
+                    }
+                    if chat.sender
+                    else None
+                ),
+                "receiver": (
+                    {
+                        "id": chat.receiver.id,
+                        "username": chat.receiver.username,
+                        "name": chat.receiver.name,
+                        "email": chat.receiver.email,
+                    }
+                    if chat.receiver
+                    else None
+                ),
+                "group": (
+                    {
+                        "id": chat.group.id,
+                        "chatTitle": chat.group.chatTitle,
+                    }
+                    if chat.group
+                    else None
+                ),
             }
             for chat in private_chats
         ]
 
-        return jsonify({
-            "status": "success",
-            "total": len(private_chat_data),
-            "chats": private_chat_data
-        }), 200
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "total": len(private_chat_data),
+                    "chats": private_chat_data,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": "Failed to fetch user chats",
-            "error": str(e)
-        }), 500
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Failed to fetch user chats",
+                    "error": str(e),
+                }
+            ),
+            500,
+        )
+
+
+@userBP.route("/groupchats/<int:group_id>", methods=["GET"])
+def fetchuser_group_chats(group_id):
+    try:
+        chats = (
+            db.session.query(UserChat, User)
+            .join(User, User.id == UserChat.userID)
+            .filter(UserChat.groupID == group_id)
+            .order_by(UserChat.chat_at.asc())
+            .all()
+        )
+
+        if not chats:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "No chats found for this group.",
+                        "group_id": group_id,
+                    }
+                ),
+                404,
+            )
+
+        chat_list = []
+        for chat, user in chats:
+            chat_list.append(
+                {
+                    "chat_id": chat.id,
+                    "message": chat.chat,
+                    "username": user.username,
+                    "chat_at": chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "group_id": group_id,
+                    "total_chats": len(chat_list),
+                    "chats": chat_list,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Error fetching group chats: {e}")
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "An error occurred while fetching group chats.",
+                    "error": str(e),
+                }
+            ),
+            500,
+        )
