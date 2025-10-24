@@ -742,3 +742,48 @@ def fetchuser_group_chats(group_id):
             ),
             500,
         )
+
+
+@userBP.route("/allusers/hiddensecret", methods=["GET"])
+def get_all_users_nopage():
+    try:
+        search = request.args.get("search", "", type=str)
+
+        query = User.query
+
+        # Apply search filter if provided
+        if search:
+            query = query.filter(
+                (User.name.ilike(f"%{search}%")) | (User.email.ilike(f"%{search}%"))
+            )
+
+        users = query.all()
+
+        user_list = [
+            {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "phoneNumber": user.phoneNumber,
+            }
+            for user in users
+        ]
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "total_users": len(user_list),
+                    "users": user_list,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return (
+            jsonify(
+                {"status": "error", "message": "Internal Server Error", "error": str(e)}
+            ),
+            500,
+        )
