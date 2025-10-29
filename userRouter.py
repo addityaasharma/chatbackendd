@@ -744,11 +744,7 @@ def fetchuser_group_chats(group_id):
                 }
             ),
             500,
-<<<<<<< HEAD
         )
-=======
-        )
-
 
 @userBP.route("/allusers/hiddensecret", methods=["GET"])
 def get_all_users_nopage():
@@ -793,4 +789,3 @@ def get_all_users_nopage():
             ),
             500,
         )
->>>>>>> e311e0f345d04a74f11b0dd1eecb549a7aa0edd7
