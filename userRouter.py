@@ -726,6 +726,7 @@ def fetchuser_group_chats(group_id):
                     "group_id": group_id,
                     "total_chats": len(chat_list),
                     "chats": chat_list,
+                    "message" : "done",
                 }
             ),
             200,
