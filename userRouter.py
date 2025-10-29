@@ -713,6 +713,8 @@ def fetchuser_group_chats(group_id):
                     "chat_id": chat.id,
                     "message": chat.chat,
                     "username": user.username,
+                    "email": user.email,
+                    "phoneNumber": user.phoneNumber,
                     "chat_at": chat.chat_at.strftime("%Y-%m-%d %H:%M:%S"),
                 }
             )
